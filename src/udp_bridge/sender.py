@@ -42,7 +42,7 @@ class UdpSender:
             "topic": topic
         }, pickle.HIGHEST_PROTOCOL)))
         enc_data = self.cipher.encrypt(serialized_data)
-        self.sock.sendto(enc_data, self.target)
+        self.sock.sendto(enc_data + b'\n', self.target)
 
 
 def validate_params():
