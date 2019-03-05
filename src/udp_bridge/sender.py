@@ -10,12 +10,12 @@ from aes_helper import AESCipher
 
 
 class UdpSender:
-    def __init__(self, target_ip):
+    def __init__(self, target_ip, port):
         rospy.init_node("udp_bridge_sender", anonymous=True, log_level=rospy.INFO)
-        rospy.loginfo("Initializing udp_bridge to '" + target_ip + "'")
+        rospy.loginfo("Initializing udp_bridge to '" + target_ip + ":" + str(port) + "'")
 
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
-        self.target = (target_ip, rospy.get_param("udp_bridge/port"))
+        self.target = (target_ip, port)
 
         self.cipher = AESCipher(rospy.get_param("udp_bridge/encryption_key", None))
 
@@ -37,10 +37,10 @@ class UdpSender:
             rospy.Timer(rospy.Duration(backoff), lambda event: self.setup_topic_subscriber(topic), oneshot=True)
 
     def topic_callback(self, data, topic):
-        serialized_data = str(base64.b64encode(pickle.dumps({
+        serialized_data = base64.b64encode(pickle.dumps({
             "data": data,
             "topic": topic
-        }, pickle.HIGHEST_PROTOCOL)))
+        }, pickle.HIGHEST_PROTOCOL)).decode("ASCII")
         enc_data = self.cipher.encrypt(serialized_data)
         self.sock.sendto(enc_data + b'\n', self.target)
 
@@ -87,9 +87,10 @@ def validate_params():
 
 if __name__ == '__main__':
     if validate_params():
+        port = rospy.get_param("udp_bridge/port")
         senders = []
         for ip in rospy.get_param("udp_bridge/target_ips"):
-            senders.append(UdpSender(ip))
+            senders.append(UdpSender(ip, port))
 
         rospy.spin()
 
