@@ -11,7 +11,7 @@ from aes_helper import AESCipher
 
 class UdpSender:
     def __init__(self, target_ip):
-        rospy.init_node("udp_bridge", anonymous=True, log_level=rospy.INFO)
+        rospy.init_node("udp_bridge_sender", anonymous=True, log_level=rospy.INFO)
         rospy.loginfo("Initializing udp_bridge to '" + target_ip + "'")
 
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
