@@ -8,7 +8,7 @@
   <maintainer email="info@bit-bots.de">Finn-Thorben Sell</maintainer>
   <maintainer email="dev@finn-thorben.me">Hamburg Bit-Bots</maintainer>
 
-  <license>BSD</license>
+  <license>MIT</license>
 
   <!-- <url type="website">http://wiki.ros.org/udp_bridge</url> -->
 
