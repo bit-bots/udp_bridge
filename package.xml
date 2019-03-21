@@ -4,9 +4,9 @@
   <version>0.0.0</version>
   <description>Bridge arbitrary ROS messages to a defined external IP-Address while only using UDP.</description>
 
-  <author email="dev@finn-thorben.me">Finn-Thorben Sell</author>
-  <maintainer email="info@bit-bots.de">Finn-Thorben Sell</maintainer>
-  <maintainer email="dev@finn-thorben.me">Hamburg Bit-Bots</maintainer>
+  <maintainer email="7sell@informatik.uni-hamburg.de">Finn-Thorben Sell</maintainer>
+  <maintainer email="info@bit-bots.de">Hamburg Bit-Bots</maintainer>
+  <author email="7sell@informatik.uni-hamburg.de">Finn-Thorben Sell</author>
 
   <license>MIT</license>
 
