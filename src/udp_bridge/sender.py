@@ -42,7 +42,10 @@ class UdpSender:
             "topic": topic
         }, pickle.HIGHEST_PROTOCOL)).decode("ASCII")
         enc_data = self.cipher.encrypt(serialized_data)
-        self.sock.sendto(enc_data + b'\n', self.target)
+        try:
+            self.sock.sendto(enc_data + b'\n', self.target)
+        except Exception as e:
+            rospy.logerr_once('Could not send data from topic {} to {}: {}'.format(topic, self.target, type(e)))
 
 
 def validate_params():
