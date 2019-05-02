@@ -6,7 +6,7 @@ import socket
 import pickle
 import base64
 
-from aes_helper import AESCipher
+from udp_bridge.aes_helper import AESCipher
 
 
 class UdpSender:
