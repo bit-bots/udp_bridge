@@ -6,7 +6,7 @@ import socket
 import pickle
 import base64
 
-from aes_helper import AESCipher
+from udp_bridge.aes_helper import AESCipher
 
 
 class UdpReceiver:
@@ -25,23 +25,31 @@ class UdpReceiver:
 
     def recv_messages(self):
         self.sock.settimeout(1)
-        acc = b''
+        acc = bytes()
         while not rospy.is_shutdown():
             try:
                 acc += self.sock.recv(2048)
                 if acc[-1] == 10:   # 10 is \n in a bytestring
                     self.handle_message(acc[:-1])
-                    acc = b''
+                    acc = bytes()
             except socket.timeout:
                 pass
 
     def handle_message(self, msg):
-        dec_msg = base64.b64decode(self.cipher.decrypt(msg))
-        deserialized_msg = pickle.loads(dec_msg)
+        """
+        Handle a new message which came in from the socket
+        :type msg bytes
+        """
+        try:
+            dec_msg = self.cipher.decrypt(msg)
+            bin_msg = base64.b64decode(dec_msg)
+            deserialized_msg = pickle.loads(bin_msg)
 
-        data = deserialized_msg['data']
-        topic = deserialized_msg['topic']
-        self.publish(topic, data)
+            data = deserialized_msg['data']
+            topic = deserialized_msg['topic']
+            self.publish(topic, data)
+        except Exception as e:
+            rospy.logerr(0.5, 'Could not deserialize received message wither error {}'.format(type(e)))
 
     def publish(self, topic, msg):
         if topic not in self.publishers.keys():

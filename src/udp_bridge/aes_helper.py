@@ -15,7 +15,7 @@ class AESCipher:
             key = None
 
         if key is not None:
-            self.bs = 32
+            self.bs = AES.block_size
             self.mode = AES.MODE_CBC
             self.key = hashlib.sha256(key.encode()).digest()
             self.random = Random.new()
@@ -25,26 +25,27 @@ class AESCipher:
     def encrypt(self, message):
         """
         :type message: str
-        :rtype: str
+        :rtype: bytes
         """
         if self.key is not None:
             raw = self._pad(message)
             iv = self.random.read(AES.block_size)
             cipher = AES.new(self.key, self.mode, iv)
-            return base64.b64encode(iv + cipher.encrypt(raw))
+            return iv + cipher.encrypt(raw)
         else:
             return message
 
     def decrypt(self, enc):
         """
-        :type enc: str
+        :type enc: bytes
         :rtype: str
         """
         if self.key is not None:
-            enc = base64.b64decode(enc)
+            #enc = base64.b64decode(enc)
             iv = enc[:AES.block_size]
             cipher = AES.new(self.key, self.mode, iv)
-            return self._unpad(cipher.decrypt(enc[AES.block_size:])).decode("UTF-8")
+            dec_msg = cipher.decrypt(enc[AES.block_size:])
+            return self._unpad(dec_msg)
         else:
             return enc
 
