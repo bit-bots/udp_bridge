@@ -38,7 +38,7 @@ class AESCipher:
     def decrypt(self, enc):
         """
         :type enc: bytes
-        :rtype: str
+        :rtype: bytes
         """
         if self.key is not None:
             #enc = base64.b64decode(enc)

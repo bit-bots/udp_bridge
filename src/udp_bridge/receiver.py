@@ -28,10 +28,12 @@ class UdpReceiver:
         acc = bytes()
         while not rospy.is_shutdown():
             try:
-                acc += self.sock.recv(2048)
-                if acc[-1] == 10:   # 10 is \n in a bytestring
-                    self.handle_message(acc[:-1])
+                acc += self.sock.recv(10240)
+
+                if acc[-3:] == b'\xff\xff\xff':  # our package delimiter
+                    self.handle_message(acc[:-3])
                     acc = bytes()
+
             except socket.timeout:
                 pass
 
@@ -49,10 +51,11 @@ class UdpReceiver:
             topic = deserialized_msg['topic']
             self.publish(topic, data)
         except Exception as e:
-            rospy.logerr(0.5, 'Could not deserialize received message wither error {}'.format(type(e)))
+            rospy.logerr('Could not deserialize received message wither error {}'.format(str(e)))
 
     def publish(self, topic, msg):
         if topic not in self.publishers.keys():
+            rospy.loginfo('Publishing new topic {}'.format(topic))
             self.publishers[topic] = rospy.Publisher(topic, type(msg), tcp_nodelay=True, queue_size=5)
 
         self.publishers[topic].publish(msg)
