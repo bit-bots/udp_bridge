@@ -4,6 +4,7 @@ import rostopic
 import socket
 import pickle
 import base64
+from threading import Lock
 from queue import Queue, Empty, Full
 
 from udp_bridge.aes_helper import AESCipher
@@ -20,6 +21,7 @@ class UdpSender:
 
         self.cipher = AESCipher(rospy.get_param("udp_bridge/encryption_key", None))
 
+        self.queue_lock = Lock()
         self.queues = {}
         self.max_queue_size = rospy.get_param('udp_bridge/sender_queue_max_size')
         self.subscribers = {}
@@ -33,7 +35,10 @@ class UdpSender:
         if data_class is not None:
             self.subscribers[topic] \
                 = rospy.Subscriber(topic, data_class, self.topic_callback, topic, queue_size=2, tcp_nodelay=True)
+
+            self.queue_lock.acquire()
             self.queues[topic] = Queue(self.max_queue_size)
+            self.queue_lock.release()
 
             rospy.loginfo("Subscribed to topic " + topic)
         else:
@@ -55,6 +60,8 @@ class UdpSender:
             rospy.logwarn('Could not enqueue data for topic {}. Queue full'.format(topic))
 
     def process_queues_once(self):
+        self.queue_lock.acquire()
+
         for topic, queue in self.queues.items():
             try:
                 data = queue.get_nowait()
@@ -65,6 +72,8 @@ class UdpSender:
             except Exception as e:
                 rospy.logerr('Could not send data from topic {} to {} with error {}'.format(topic, self.target, str(e)))
                 queue.task_done()
+
+        self.queue_lock.release()
 
 
 def validate_params():
