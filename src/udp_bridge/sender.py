@@ -12,7 +12,7 @@ from udp_bridge.aes_helper import AESCipher
 
 class UdpSender:
     def __init__(self, target_ip, port):
-        rospy.init_node("udp_bridge_sender", anonymous=True, log_level=rospy.INFO)
+        rospy.init_node("udp_bridge_sender", anonymous=True, log_level=rospy.ERROR)
         rospy.loginfo("Initializing udp_bridge to '" + target_ip + ":" + str(port) + "'")
 
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
@@ -42,7 +42,7 @@ class UdpSender:
 
             rospy.loginfo("Subscribed to topic " + topic)
         else:
-            rospy.logwarn("Topic " + topic + " is not yet known. Retrying in " + str(int(backoff)) + " seconds")
+            rospy.loginfo("Topic " + topic + " is not yet known. Retrying in " + str(int(backoff)) + " seconds")
             rospy.Timer(
                 rospy.Duration(int(backoff)),
                 lambda event: self.setup_topic_subscriber(topic, backoff * 1.2),
@@ -57,7 +57,7 @@ class UdpSender:
         try:
             self.queues[topic].put(enc_data, block=True, timeout=0.5)
         except Full:
-            rospy.logwarn('Could not enqueue data for topic {}. Queue full'.format(topic))
+            rospy.loginfo('Could not enqueue data for topic {}. Queue full'.format(topic))
 
     def process_queues_once(self):
         self.queue_lock.acquire()
@@ -70,7 +70,7 @@ class UdpSender:
             except Empty:
                 pass
             except Exception as e:
-                rospy.logerr('Could not send data from topic {} to {} with error {}'.format(topic, self.target, str(e)))
+                rospy.logwarn('Could not send data from topic {} to {} with error {}'.format(topic, self.target, str(e)))
                 queue.task_done()
 
         self.queue_lock.release()
