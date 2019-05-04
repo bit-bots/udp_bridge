@@ -49,16 +49,19 @@ class UdpReceiver:
 
             data = deserialized_msg['data']
             topic = deserialized_msg['topic']
-            self.publish(topic, data)
+            hostname = deserialized_msg['hostname']
+            self.publish(topic, data, hostname)
         except Exception as e:
             rospy.logerr('Could not deserialize received message wither error {}'.format(str(e)))
 
-    def publish(self, topic, msg):
-        if topic not in self.publishers.keys():
-            rospy.loginfo('Publishing new topic {}'.format(topic))
-            self.publishers[topic] = rospy.Publisher(topic, type(msg), tcp_nodelay=True, queue_size=5)
+    def publish(self, topic, msg, hostname):
+        namespaced_topic = "{}/{}".format(hostname, topic)
 
-        self.publishers[topic].publish(msg)
+        if topic not in self.publishers.keys():
+            rospy.loginfo('Publishing new topic {}:{}'.format(hostname, topic))
+            self.publishers[namespaced_topic] = rospy.Publisher(namespaced_topic, type(msg), tcp_nodelay=True, queue_size=5)
+
+        self.publishers[namespaced_topic].publish(msg)
 
 
 def validate_params():

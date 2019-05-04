@@ -15,6 +15,7 @@ class UdpSender:
         rospy.init_node("udp_bridge_sender", anonymous=True, log_level=rospy.ERROR)
         rospy.loginfo("Initializing udp_bridge to '" + target_ip + ":" + str(port) + "'")
 
+        self.hostname = socket.gethostname()
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.target = (target_ip, port)
@@ -51,7 +52,8 @@ class UdpSender:
     def topic_callback(self, data, topic):
         serialized_data = base64.b64encode(pickle.dumps({
             "data": data,
-            "topic": topic
+            "topic": topic,
+            "hostname": self.hostname
         }, pickle.HIGHEST_PROTOCOL)).decode("ASCII")
         enc_data = self.cipher.encrypt(serialized_data)
         try:
