@@ -57,7 +57,7 @@ class UdpReceiver:
     def publish(self, topic, msg, hostname):
         namespaced_topic = "{}/{}".format(hostname, topic)
 
-        if topic not in self.publishers.keys():
+        if namespaced_topic not in self.publishers.keys():
             rospy.loginfo('Publishing new topic {}:{}'.format(hostname, topic))
             self.publishers[namespaced_topic] = rospy.Publisher(namespaced_topic, type(msg), tcp_nodelay=True, queue_size=5)
 
