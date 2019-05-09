@@ -10,72 +10,58 @@ from queue import Queue, Empty, Full
 from udp_bridge.aes_helper import AESCipher
 
 
-class UdpSender:
-    def __init__(self, target_ip, port):
-        rospy.init_node("udp_bridge_sender", anonymous=True, log_level=rospy.ERROR)
-        rospy.loginfo("Initializing udp_bridge to '" + target_ip + ":" + str(port) + "'")
+class AutoSubscriber:
+    """
+    A class which automatically subscribes to a topic as soon as it becomes available and buffers received messages
+    in a queue.
+    """
 
-        self.hostname = socket.gethostname()
-        self.sock = socket.socket(type=socket.SOCK_DGRAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.target = (target_ip, port)
+    def __init__(self, topic, queue_size):
+        """
+        :param topic: Topic to subscribe to
+        :type topic: str
+        :param queue_size: How many received messages should be buffered
+        :type queue_size: int
+        """
+        self.topic = topic
+        self.queue = Queue(queue_size)
 
-        self.cipher = AESCipher(rospy.get_param("udp_bridge/encryption_key", None))
+        self.__subscriber = None        # type: rospy.Subscriber
+        self.__subscribe()
 
-        self.queue_lock = Lock()
-        self.queues = {}
-        self.max_queue_size = rospy.get_param('udp_bridge/sender_queue_max_size')
-        self.subscribers = {}
-
-        for topic in rospy.get_param("udp_bridge/topics"):
-            self.setup_topic_subscriber(topic)
-
-    def setup_topic_subscriber(self, topic, backoff=1.0):
-        """Try to setup a subscriber for the specified topic until it works"""
-        data_class, _, _ = rostopic.get_topic_class(topic)
+    def __subscribe(self, backoff=1.0):
+        """
+        Try to subscribe to the set topic
+        :param backoff: How long to wait until another try
+        """
+        data_class, _, _ = rostopic.get_topic_class(self.topic)
         if data_class is not None:
-            self.subscribers[topic] \
-                = rospy.Subscriber(topic, data_class, self.topic_callback, topic, queue_size=2, tcp_nodelay=True)
+            # topic is known
+            self.__subscriber = rospy.Subscriber(self.topic, data_class, self.__message_callback,
+                                                 queue_size=1, tcp_nodelay=True)
+            rospy.loginfo('Subscribed to topic {}'.format(self.topic))
 
-            self.queue_lock.acquire()
-            self.queues[topic] = Queue(self.max_queue_size)
-            self.queue_lock.release()
-
-            rospy.loginfo("Subscribed to topic " + topic)
         else:
-            rospy.loginfo("Topic " + topic + " is not yet known. Retrying in " + str(int(backoff)) + " seconds")
+            # topic is not yet known
+            rospy.loginfo('Topic {} is not yet known. Retrying in {} seconds'.format(self.topic, int(backoff)))
             rospy.Timer(
                 rospy.Duration(int(backoff)),
-                lambda event: self.setup_topic_subscriber(topic, backoff * 1.2),
-                oneshot=True)
+                lambda event: self.__subscribe(backoff * 1.2),
+                oneshot=True
+            )
 
-    def topic_callback(self, data, topic):
+    def __message_callback(self, data):
         serialized_data = base64.b64encode(pickle.dumps({
             "data": data,
-            "topic": topic,
-            "hostname": self.hostname
+            "topic": self.topic,
+            "hostname": hostname
         }, pickle.HIGHEST_PROTOCOL)).decode("ASCII")
-        enc_data = self.cipher.encrypt(serialized_data)
+        enc_data = cipher.encrypt(serialized_data)
+
         try:
-            self.queues[topic].put(enc_data, block=True, timeout=0.5)
+            self.queue.put(enc_data, block=True, timeout=0.5)
         except Full:
-            rospy.loginfo('Could not enqueue data for topic {}. Queue full'.format(topic))
-
-    def process_queues_once(self):
-        self.queue_lock.acquire()
-
-        for topic, queue in self.queues.items():
-            try:
-                data = queue.get_nowait()
-                self.sock.sendto(data +  b'\xff\xff\xff', self.target)
-                queue.task_done()
-            except Empty:
-                pass
-            except Exception as e:
-                rospy.logwarn('Could not send data from topic {} to {} with error {}'.format(topic, self.target, str(e)))
-                queue.task_done()
-
-        self.queue_lock.release()
+            rospy.logwarn_throttle(5, 'Could enqueue new message of topic {}. Queue full.'.format(self.topic))
 
 
 def validate_params():
@@ -135,15 +121,37 @@ def validate_params():
 
 if __name__ == '__main__':
     if validate_params():
+        rospy.init_node('udp_bridge_sender',log_level=rospy.INFO)
+
+        hostname = socket.gethostname()
+        cipher = AESCipher(rospy.get_param("udp_bridge/encryption_key", None))
         port = rospy.get_param("udp_bridge/port")
         freq = rospy.get_param("udp_bridge/send_frequency")
-        senders = []
-        for ip in rospy.get_param("udp_bridge/target_ips"):
-            senders.append(UdpSender(ip, port))
+        targets = rospy.get_param('udp_bridge/target_ips')
+        max_queue_size = rospy.get_param('udp_bridge/sender_queue_max_size')
+        topics = rospy.get_param("udp_bridge/topics")
+
+        sock = socket.socket(type=socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        subscribers = []
+
+        for topic in topics:
+            subscribers.append(AutoSubscriber(topic, max_queue_size))
 
         while not rospy.is_shutdown():
-            for sender in senders:
-                sender.process_queues_once()
+            for subscriber in subscribers:
+                try:
+                    data = subscriber.queue.get_nowait()
+
+                    for target in targets:
+                        try:
+                            sock.sendto(data + b'\xff\xff\xff', (target, port))
+                        except Exception as e:
+                            rospy.logerr('Could not send data of topic {} to {} with error {}'
+                                         .format(subscriber.topic, target, str(e)))
+
+                except Empty:
+                    pass
 
             rospy.sleep(rospy.Duration(0, int(1000000000 / freq)))
 
