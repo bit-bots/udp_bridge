@@ -5,6 +5,13 @@ from Crypto.Cipher import AES
 
 
 class AESCipher:
+    """
+    A wrapper around the true python AESCipher.
+
+    This wrapper takes care of properly padding messages, selection an encryption mode and handling the encryption key.
+    It is safe to keep one object because the internal python cipher is not reused.
+    """
+
     def __init__(self, key):
         """
         :param key: The passphrase used to encrypt and decrypt messages.
