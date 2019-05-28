@@ -13,7 +13,7 @@ topics:
   - /debug/dsd/body_behavior
   - /debug/dsd/head_behavior
   - /debug/dsd/hcm
-  - /move_base_simple/goals
+  - /move_base_simple/goal
   - /team_data
   - /ball_relative
   - /obstacles_relative
