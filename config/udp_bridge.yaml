@@ -24,3 +24,8 @@ topics:
   - /animation/result
   - /animation/feedback
   - /animation
+  - /diagnostics
+  - /joint_states
+  - /imu/data
+  - /buttons
+  - /system_workload
