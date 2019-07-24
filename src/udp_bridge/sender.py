@@ -44,6 +44,8 @@ class AutoSubscriber:
         else:
             # topic is not yet known
             rospy.loginfo('Topic {} is not yet known. Retrying in {} seconds'.format(self.topic, int(backoff)))
+            if backoff > 30:
+                backoff = 30
             rospy.Timer(
                 rospy.Duration(int(backoff)),
                 lambda event: self.__subscribe(backoff * 1.2),

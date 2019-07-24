@@ -61,7 +61,7 @@ class UdpReceiver:
 
             self.publish(topic, data, hostname)
         except Exception as e:
-            rospy.logerr('Could not deserialize received message wither error {}'.format(str(e)))
+            rospy.logerr('Could not deserialize received message with error {}'.format(str(e)))
 
     def publish(self, topic, msg, hostname):
         # publish msg under namespace
