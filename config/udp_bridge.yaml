@@ -15,6 +15,7 @@ topics:
   - /debug/dsd/hcm
   - /move_base_simple/goal
   - /team_data
+  - /balls_relative
   - /ball_relative
   - /obstacles_relative
   - /gamestate
