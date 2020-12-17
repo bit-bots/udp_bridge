@@ -16,5 +16,7 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>roslib</exec_depend>
 
+  <depend>bitbots_docs</depend>
+
   <export></export>
 </package>
