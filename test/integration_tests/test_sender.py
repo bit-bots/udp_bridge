@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+import unittest
+import rostest
+import rospy
+import socket
+from std_msgs import msg
+
+
+class SenderTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        rospy.init_node(type(self).__name__, anonymous=True)
+
+    def test_topic_gets_published_and_sent(self):
+        # setup makeshift receiver
+        port = rospy.get_param("/udp_bridge/port")
+        sock = socket.socket(type=socket.SOCK_DGRAM)
+        sock.bind(("127.0.0.1", port))
+        sock.settimeout(1.0)
+
+        # publish a test message
+        topic = rospy.get_param("/udp_bridge/topics")[0]
+        publisher = rospy.Publisher(topic, msg.String, latch=True, queue_size=1)
+        publisher.publish(msg.String("Hello World"))
+
+        # assert that a message is sent by trying to receive it
+        self.assertIsNotNone(sock.recv(10240))
+
+
+if __name__ == "__main__":
+    rostest.rosrun("udp_bridge", SenderTestCase.__name__, SenderTestCase)

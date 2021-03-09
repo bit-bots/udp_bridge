@@ -19,5 +19,9 @@
   <depend>bitbots_docs</depend>
   <depend>python3-cryptography</depend>
 
+  <test_depend>rosunit</test_depend>
+  <test_depend>rostest</test_depend>
+  <test_depend>python-hypothesis</test_depend>
+
   <export></export>
 </package>
