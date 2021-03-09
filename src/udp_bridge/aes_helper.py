@@ -1,7 +1,7 @@
 import base64
-import hashlib
-from Crypto import Random
-from Crypto.Cipher import AES
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.hashes import SHA256
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
 class AESCipher:
@@ -12,52 +12,38 @@ class AESCipher:
     It is safe to keep one object because the internal python cipher is not reused.
     """
 
-    def __init__(self, key):
+    def __init__(self, key: str):
         """
         :param key: The passphrase used to encrypt and decrypt messages.
             If it is None, no encryption/decryption takes place
-        :type key: str
         """
         if key is not None and len(key) == 0:
             key = None
 
-        if key is not None:
-            self.bs = AES.block_size
-            self.mode = AES.MODE_CBC
-            self.key = hashlib.sha256(key.encode()).digest()
-            self.random = Random.new()
+        if key is None:
+            self.key = None
         else:
-            self.key = key
+            # hash the key so that it has a fixed length and is urlsafe as required by the Fernet cipher
+            key = PBKDF2HMAC(
+                algorithm=SHA256(),
+                length=32,
+                salt=b"bit-bots",
+                iterations=10000
+            ).derive(bytes(key, encoding="UTF-8"))
+            self.key = base64.urlsafe_b64encode(key)
 
-    def encrypt(self, message):
-        """
-        :type message: str
-        :rtype: bytes
-        """
-        if self.key is not None:
-            raw = self._pad(message)
-            iv = self.random.read(AES.block_size)
-            cipher = AES.new(self.key, self.mode, iv)
-            return iv + cipher.encrypt(raw)
-        else:
-            return message
+    def encrypt(self, message: str) -> bytes:
+        if message == "":
+            raise ValueError("Cannot encrypt empty message")
+        if self.key is None:
+            return bytes(message, encoding="UTF-8")
 
-    def decrypt(self, enc):
-        """
-        :type enc: bytes
-        :rtype: bytes
-        """
-        if self.key is not None:
-            #enc = base64.b64decode(enc)
-            iv = enc[:AES.block_size]
-            cipher = AES.new(self.key, self.mode, iv)
-            dec_msg = cipher.decrypt(enc[AES.block_size:])
-            return self._unpad(dec_msg)
-        else:
-            return enc
+        return Fernet(key=self.key).encrypt(bytes(message, encoding="UTF-8"))
 
-    def _pad(self, s):
-        return s + (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs)
+    def decrypt(self, enc: bytes) -> str:
+        if len(enc) == 0:
+            raise ValueError("Cannot decrypt empty data")
+        if self.key is None:
+            return str(enc, encoding="UTF-8")
 
-    def _unpad(self, s):
-        return s[:-ord(s[len(s) - 1:])]
+        return str(Fernet(key=self.key).decrypt(enc), encoding="UTF-8")
