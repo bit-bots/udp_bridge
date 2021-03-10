@@ -15,20 +15,22 @@ from udp_bridge.aes_helper import AESCipher
 class UdpReceiver:
     def __init__(self):
         port = rospy.get_param("udp_bridge/port")
-        rospy.init_node("udp_bridge_receiver", log_level=rospy.ERROR)
         rospy.loginfo("Initializing udp_bridge on port " + str(port))
 
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", port))
+        self.sock.settimeout(1)
 
-        self.remap = None  # type: str
         self.known_senders = []  # type: list
 
         self.cipher = AESCipher(rospy.get_param("udp_bridge/encryption_key", None))
 
         self.publishers = {}
 
-    def recv_messages(self):
+    def recv_message(self):
+        """
+        Receive a message from the network, process it and publish it into ROS
+        """
         self.sock.settimeout(1)
         acc = bytes()
         while not rospy.is_shutdown():
@@ -42,10 +44,9 @@ class UdpReceiver:
             except socket.timeout:
                 pass
 
-    def handle_message(self, msg):
+    def handle_message(self, msg: bytes):
         """
         Handle a new message which came in from the socket
-        :type msg bytes
         """
         try:
             dec_msg = self.cipher.decrypt(msg)
@@ -63,27 +64,28 @@ class UdpReceiver:
         except Exception as e:
             rospy.logerr('Could not deserialize received message with error {}'.format(str(e)))
 
-    def publish(self, topic, msg, hostname):
-        # publish msg under namespace
-        namespaced_topic = "{}/{}".format(hostname, topic)
+    def publish(self, topic: str, msg, hostname: str):
+        """
+        Publish a message into ROS
+
+        :param topic: The topic on which the message was sent on the originating host
+        :param msg: The ROS message which was sent on the originating host
+        :param hostname: The hostname of the originating host
+        """
+
+        # publish msg under host namespace
+        namespaced_topic = "{}/{}".format(hostname, topic).replace("//", "/")
+
+        # create a publisher object if we don't have one already
         if namespaced_topic not in self.publishers.keys():
-            rospy.loginfo('Publishing new topic {}:{}'.format(hostname, topic))
+            rospy.loginfo('Publishing new topic {}'.format(namespaced_topic))
             self.publishers[namespaced_topic] = rospy.Publisher(namespaced_topic, type(msg), tcp_nodelay=True,
-                                                                queue_size=5)
+                                                                queue_size=5, latch=True)
 
         self.publishers[namespaced_topic].publish(msg)
 
-        # publish topic under / as well if configured
-        if self.remap is not None and self.remap == hostname:
-            if topic not in self.publishers.keys():
-                rospy.loginfo("Publishing new topic {}".format(topic))
-                self.publishers[topic] = rospy.Publisher(topic, type(msg), tcp_nodelay=True, queue_size=5)
 
-            self.publishers[topic].publish(msg)
-
-
-def validate_params():
-    """:rtype: bool"""
+def validate_params() -> bool:
     result = True
     if not rospy.has_param("udp_bridge"):
         rospy.logfatal("parameter 'udp_bridge' not found")
@@ -99,58 +101,14 @@ def validate_params():
     return result
 
 
-def get_key():
-    settings = termios.tcgetattr(sys.stdin)
-    tty.setraw(sys.stdin.fileno())
-    select.select([sys.stdin], [], [], 0)
-    key = sys.stdin.read(1)
-    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
-
-    return key
-
-
-def print_tui(receiver):
-    while not rospy.is_shutdown():
-        print("\033c", end="")
-        print('\033[1m##### UDP Bridge #####\033[0m')
-        print()
-        print("Available namespaces to remap to /:")
-        if len(receiver.known_senders) == 0:
-            print("\033[91mNone\033[0m")
-        else:
-            for i, host in enumerate(receiver.known_senders):
-                if host == receiver.remap:
-                    print("\033[92m\033[1m    --> ({}) {} <--\033[0m".format(i, host))
-                else:
-                    print("        ({}) {}".format(i, host))
-        print()
-        print("To remap a namespace to / just press the corresponding number")
-
-        rospy.sleep(rospy.Duration(1))
-
-
 def main():
     if validate_params():
+        rospy.init_node("udp_bridge_receiver")
         # setup udp receiver
         receiver = UdpReceiver()
-        udp_worker = Thread(target=receiver.recv_messages)
-        udp_worker.setDaemon(False)
-
-        tui_worker = Thread(target=print_tui, args=[receiver])
-        tui_worker.setDaemon(True)
-
-        udp_worker.start()
-        tui_worker.start()
 
         while not rospy.is_shutdown():
-            key = get_key()
-            rospy.sleep(rospy.Duration(1))
-
-            try:
-                receiver.remap = receiver.known_senders[int(key)]
-            # it can either throw ValueError or ListIndexOutOfRange
-            except Exception:
-                pass
+            receiver.recv_message()
 
 
 if __name__ == '__main__':
