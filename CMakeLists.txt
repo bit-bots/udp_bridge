@@ -10,6 +10,7 @@ if (CATKIN_ENABLE_TESTING)
     find_package(rosunit REQUIRED)
     catkin_add_nosetests(test/unit_tests)
     add_rostest(test/integration_tests/test_sender.launch)
+    add_rostest(test/integration_tests/test_sender_receiver.launch)
 endif()
 
 enable_bitbots_docs()

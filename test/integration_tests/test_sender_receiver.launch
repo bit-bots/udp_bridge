@@ -1,0 +1,13 @@
+<launch>
+    <!-- We cannot include the normal send.launch and receive.launch scripts because they both name the node the same -->
+    <node pkg="udp_bridge" type="sender.py" name="udp_bridge_sender" />
+    <node pkg="udp_bridge" type="receiver.py" name="udp_bridge_receiver" />
+    <rosparam param="/udp_bridge" command="load" file="$(find udp_bridge)/config/udp_bridge.yaml" />
+    <rosparam param="/udp_bridge">---
+        port: 1234
+        target_ips: [ "127.0.0.1" ]
+        topics: [ "/test_topic" ]
+    </rosparam>
+
+    <test pkg="udp_bridge" type="test_sender_receiver.py" test-name="test_sender_receiver" />
+</launch>
