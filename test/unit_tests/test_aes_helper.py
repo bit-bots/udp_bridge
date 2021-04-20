@@ -1,11 +1,11 @@
-import unittest
 import rosunit
 from udp_bridge import aes_helper
 from hypothesis import given, assume
 from hypothesis.strategies import text
+from bitbots_test.test_case import TestCase
 
 
-class AesHelperTestCase(unittest.TestCase):
+class AesHelperTestCase(TestCase):
     @given(text(), text())
     def test_decrypt_inverts_encrypt(self, message, key):
         assume(message != "")
