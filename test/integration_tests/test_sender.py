@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import rostest
 import rospy
 import socket
 from std_msgs import msg
@@ -24,4 +23,5 @@ class SenderTestCase(RosNodeTestCase):
 
 
 if __name__ == "__main__":
-    rostest.rosrun("udp_bridge", SenderTestCase.__name__, SenderTestCase)
+    from bitbots_test import run_integration_tests
+    run_integration_tests(SenderTestCase)

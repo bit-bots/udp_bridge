@@ -1,4 +1,3 @@
-import rosunit
 from udp_bridge import aes_helper
 from hypothesis import given, assume
 from hypothesis.strategies import text
@@ -17,4 +16,5 @@ class AesHelperTestCase(TestCase):
 
 
 if __name__ == '__main__':
-    rosunit.unitrun("udp_bridge", AesHelperTestCase.__name__, AesHelperTestCase)
+    from bitbots_test import run_unit_tests
+    run_unit_tests(AesHelperTestCase)
