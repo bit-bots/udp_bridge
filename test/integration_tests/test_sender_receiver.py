@@ -1,34 +1,25 @@
 #!/usr/bin/env python3
-import time
-import unittest
-from unittest.mock import Mock
 import rostest
 import rospy
 from socket import gethostname
 from std_msgs import msg
+from bitbots_test.test_case import RosNodeTestCase
+from bitbots_test.mocks import MockSubscriber
 
 
-class SenderReceiverTestCase(unittest.TestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        rospy.init_node(type(self).__name__, anonymous=True)
-
+class SenderReceiverTestCase(RosNodeTestCase):
     def test_sent_message_gets_received_over_bridge(self):
+        # setup
         send_topic = rospy.get_param("/udp_bridge/topics")[0]
         receive_topic = f"{gethostname()}/{send_topic}".replace("//", "/")
+        subscriber = MockSubscriber(receive_topic, msg.String)
 
-        rospy.logwarn(f"sending on {send_topic}, receiving on {receive_topic}")
-
-        # setup a subscriber on where the message will be received
-        mock_on_msg = Mock()
-        subscriber = rospy.Subscriber(receive_topic, msg.String, mock_on_msg)
-
-        # publish a test message
+        # execution
         publisher = rospy.Publisher(send_topic, msg.String, latch=True, queue_size=1)
         publisher.publish(msg.String("Hello World"))
 
-        time.sleep(0.5)
-        mock_on_msg.assert_called_once()
+        # verification
+        self.with_assertion_grace_period(subscriber.assert_one_message_received, 500, msg.String("Hello World"))
 
 
 if __name__ == "__main__":

@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
-import unittest
 import rostest
 import rospy
 import socket
 from std_msgs import msg
+from bitbots_test.test_case import RosNodeTestCase
 
 
-class SenderTestCase(unittest.TestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        rospy.init_node(type(self).__name__, anonymous=True)
-
+class SenderTestCase(RosNodeTestCase):
     def test_topic_gets_published_and_sent(self):
         # setup makeshift receiver
         port = rospy.get_param("/udp_bridge/port")
