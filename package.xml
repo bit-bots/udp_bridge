@@ -17,7 +17,7 @@
   <exec_depend>roslib</exec_depend>
 
   <depend>bitbots_docs</depend>
-  <depend>python-cryptography</depend>
+  <depend>python3-cryptography</depend>
 
   <export></export>
 </package>
