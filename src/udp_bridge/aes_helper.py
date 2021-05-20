@@ -1,5 +1,6 @@
 import base64
 from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
@@ -28,6 +29,7 @@ class AESCipher:
                 algorithm=SHA256(),
                 length=32,
                 salt=b"bit-bots",
+                backend=default_backend(),
                 iterations=10000
             ).derive(bytes(key, encoding="UTF-8"))
             self.key = base64.urlsafe_b64encode(key)
