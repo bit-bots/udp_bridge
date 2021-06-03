@@ -18,9 +18,9 @@ class SenderReceiverTestCase(RosNodeTestCase):
         publisher.publish(msg.String("Hello World"))
 
         # verification
-        self.with_assertion_grace_period(subscriber.assert_one_message_received, 500, msg.String("Hello World"))
+        self.with_assertion_grace_period(lambda: subscriber.assertOneMessageReceived(), 1000)
 
 
 if __name__ == "__main__":
-    from bitbots_test import run_integration_tests
-    run_integration_tests(SenderReceiverTestCase)
+    from bitbots_test import run_rostests
+    run_rostests(SenderReceiverTestCase)
