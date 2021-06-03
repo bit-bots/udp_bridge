@@ -8,3 +8,8 @@ catkin_python_setup()
 enable_bitbots_docs()
 
 catkin_package()
+
+if (CATKIN_ENABLE_TESTING)
+    find_package(catkin REQUIRED COMPONENTS bitbots_test)
+    enable_bitbots_tests()
+endif()
