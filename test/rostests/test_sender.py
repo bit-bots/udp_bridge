@@ -19,7 +19,7 @@ class SenderTestCase(RosNodeTestCase):
         publisher.publish(msg.String("Hello World"))
 
         # assert that a message is sent by trying to receive it
-        self.assertIsNotNone(sock.recv(10240))
+        self.with_assertion_grace_period(lambda: self.assertIsNotNone(sock.recv(10240)), 1000 * 5)
 
 
 if __name__ == "__main__":

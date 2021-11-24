@@ -18,7 +18,7 @@ class SenderReceiverTestCase(RosNodeTestCase):
         publisher.publish(msg.String("Hello World"))
 
         # verification
-        self.with_assertion_grace_period(subscriber.assertOneMessageReceived, 1000)
+        self.with_assertion_grace_period(subscriber.assertOneMessageReceived, 1000 * 5)
 
 
 if __name__ == "__main__":
