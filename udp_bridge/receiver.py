@@ -16,8 +16,8 @@ from udp_bridge.aes_helper import AESCipher
 class UdpReceiver:
     def __init__(self, node:Node):
         self.node = node
-        port = node.get_parameter("udp_bridge/port")
-        rclpy.get_logger().info("Initializing udp_bridge on port " + str(port))
+        port = node.get_parameter("port").value
+        node.get_logger().info("Initializing udp_bridge on port " + str(port))
 
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", port))
@@ -25,7 +25,7 @@ class UdpReceiver:
 
         self.known_senders = []  # type: list
 
-        self.cipher = AESCipher(node.get_parameter("udp_bridge/encryption_key", None))
+        self.cipher = AESCipher(node.get_parameter("encryption_key").value)
 
         self.publishers = {}
 
@@ -64,7 +64,7 @@ class UdpReceiver:
 
             self.publish(topic, data, hostname)
         except Exception as e:
-            rclpy.get_logger().error('Could not deserialize received message with error {}'.format(str(e)))
+            node.get_logger().error('Could not deserialize received message with error {}'.format(str(e)))
 
     def publish(self, topic: str, msg, hostname: str):
         """
@@ -80,7 +80,7 @@ class UdpReceiver:
 
         # create a publisher object if we don't have one already
         if namespaced_topic not in self.publishers.keys():
-            rclpy.get_logger().info('Publishing new topic {}'.format(namespaced_topic))
+            node.get_logger().info('Publishing new topic {}'.format(namespaced_topic))
             self.publishers[namespaced_topic] = self.node.create_publisher(type(msg),namespaced_topic, 1)
 
         self.publishers[namespaced_topic].publish(msg)
@@ -88,26 +88,23 @@ class UdpReceiver:
 
 def validate_params(node:Node) -> bool:
     result = True
-    if not node.has_parameter("udp_bridge"):
-        node.get_logger().fatal("parameter 'udp_bridge' not found")
-        result = False
 
-    if not node.has_parameter("udp_bridge/port"):
-        node.get_logger().fatal("parameter 'udp_bridge/port' not found")
+    if not node.has_parameter("port"):
+        node.get_logger().fatal("parameter 'port' not found")
         result = False
-    if not isinstance(node.get_parameter("udp_bridge/port"), int):
-        node.get_logger().fatal("parameter 'udp_bridge/port' is not an Integer")
+    if not isinstance(node.get_parameter("port").value, int):
+        node.get_logger().fatal("parameter 'port' is not an Integer")
         result = False
 
     return result
 
 
 def main():
-    rclpy.init_ros()
-    node = Node("udp_bridge_receiver")
+    rclpy.init()
+    node = Node("udp_bridge_receiver", automatically_declare_parameters_from_overrides=True)
     if validate_params(node):
         # setup udp receiver
         receiver = UdpReceiver(node)
-        thread = Thread(target = rclpy.spin, args = (node))
+        thread = Thread(target=rclpy.spin, args=(node,))
         thread.start()
         receiver.recv_message()

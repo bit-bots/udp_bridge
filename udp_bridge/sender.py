@@ -2,6 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
+from ros2topic.api import get_topic_names_and_types, get_msg_class
 import socket
 import pickle
 import base64
@@ -9,6 +10,10 @@ from threading import Lock, Thread
 from queue import Queue, Empty, Full
 
 from udp_bridge.aes_helper import AESCipher
+
+
+HOSTNAME = socket.gethostname()
+CIPHER = None
 
 
 class AutoSubscriber:
@@ -27,6 +32,7 @@ class AutoSubscriber:
         self.topic = topic
         self.queue = Queue(queue_size)
         self.node = node
+        self.timer = None
 
         self.__subscriber = None        # type: rospy.Subscriber
         self.__subscribe()
@@ -36,9 +42,20 @@ class AutoSubscriber:
         Try to subscribe to the set topic
         :param backoff: How long to wait until another try
         """
-        data_class, _, _ = rostopic.get_topic_class(self.topic)
+        if self.timer:
+            self.timer.cancel()
+
+        topics = get_topic_names_and_types(node=self.node)
+        data_class = None
+        for topic, type_list in topics:
+            if topic == self.topic:
+                data_class = get_msg_class(self.node, topic)
+                self.node.get_logger().info(str(data_class))
+                break
+
         if data_class is not None:
             # topic is known
+            self.node.get_logger().info('Want to subscribe to topic {}'.format(self.topic))
             self.__subscriber = self.node.create_subscription(data_class, self.topic, self.__message_callback, 1)
             self.node.get_logger().info('Subscribed to topic {}'.format(self.topic))
 
@@ -48,18 +65,17 @@ class AutoSubscriber:
             if backoff > 30:
                 backoff = 30
             self.timer = self.node.create_timer(
-                rclpy.Duration(seconds=int(backoff)),
-                lambda event: self.__subscribe(backoff * 1.2),
-                oneshot=True
+                backoff,
+                lambda: self.__subscribe(backoff * 1.2)
             )
 
     def __message_callback(self, data):
         serialized_data = base64.b64encode(pickle.dumps({
             "data": data,
             "topic": self.topic,
-            "hostname": hostname
+            "hostname": HOSTNAME,
         }, pickle.HIGHEST_PROTOCOL)).decode("ASCII")
-        enc_data = cipher.encrypt(serialized_data)
+        enc_data = CIPHER.encrypt(serialized_data)
 
         try:
             self.queue.put(enc_data, block=True, timeout=0.5)
@@ -119,16 +135,16 @@ def validate_params(node:Node):
 
 
 def main():
+    global CIPHER
     rclpy.init()
     node = Node('udp_bridge_sender', automatically_declare_parameters_from_overrides=True)
-    thread = Thread(target = rclpy.spin, args = (node))
+    thread = Thread(target=rclpy.spin, args=(node,))
     thread.start()
     if validate_params(node):
-        hostname = socket.gethostname()
         encryption_key = None
         if node.has_parameter("encryption_key"):
             node.get_parameter("encryption_key").value
-        cipher = AESCipher(encryption_key)
+        CIPHER = AESCipher(encryption_key)
         port = node.get_parameter("port").value
         freq = node.get_parameter("send_frequency").value
         targets = node.get_parameter('target_ips').value
