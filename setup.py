@@ -23,7 +23,7 @@ setup(
       entry_points={
           'console_scripts': [
               f'receiver = {package_name}.receiver:main',
-              f'receiver = {package_name}.sender:main',
+              f'sender = {package_name}.sender:main',
           ],
       }
 )
