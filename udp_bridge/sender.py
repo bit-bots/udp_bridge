@@ -143,7 +143,7 @@ def main():
     if validate_params(node):
         encryption_key = None
         if node.has_parameter("encryption_key"):
-            node.get_parameter("encryption_key").value
+            encryption_key = node.get_parameter("encryption_key").value
         CIPHER = AESCipher(encryption_key)
         port = node.get_parameter("port").value
         freq = node.get_parameter("send_frequency").value

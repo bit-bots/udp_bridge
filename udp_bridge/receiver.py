@@ -17,7 +17,7 @@ class UdpReceiver:
     def __init__(self, node:Node):
         self.node = node
         port = node.get_parameter("port").value
-        node.get_logger().info("Initializing udp_bridge on port " + str(port))
+        self.node.get_logger().info("Initializing udp_bridge on port " + str(port))
 
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", port))
@@ -25,7 +25,7 @@ class UdpReceiver:
 
         self.known_senders = []  # type: list
 
-        self.cipher = AESCipher(node.get_parameter("encryption_key").value)
+        self.cipher = AESCipher(self.node.get_parameter("encryption_key").value)
 
         self.publishers = {}
 
@@ -64,7 +64,7 @@ class UdpReceiver:
 
             self.publish(topic, data, hostname)
         except Exception as e:
-            node.get_logger().error('Could not deserialize received message with error {}'.format(str(e)))
+            self.node.get_logger().error('Could not deserialize received message with error {}'.format(str(e)))
 
     def publish(self, topic: str, msg, hostname: str):
         """
@@ -80,13 +80,13 @@ class UdpReceiver:
 
         # create a publisher object if we don't have one already
         if namespaced_topic not in self.publishers.keys():
-            node.get_logger().info('Publishing new topic {}'.format(namespaced_topic))
+            self.node.get_logger().info('Publishing new topic {}'.format(namespaced_topic))
             self.publishers[namespaced_topic] = self.node.create_publisher(type(msg),namespaced_topic, 1)
 
         self.publishers[namespaced_topic].publish(msg)
 
 
-def validate_params(node:Node) -> bool:
+def validate_params(node: Node) -> bool:
     result = True
 
     if not node.has_parameter("port"):
