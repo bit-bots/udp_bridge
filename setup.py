@@ -1,10 +1,29 @@
-# -*- coding:utf-8 -*-
-from distutils.core import setup
-from catkin_pkg.python_setup import generate_distutils_setup
+import glob
 
-d = generate_distutils_setup(
-    packages=['udp_bridge'],
-    package_dir={'': 'src'}
+from setuptools import find_packages
+from setuptools import setup
+
+package_name = 'udp_bridge'
+
+setup(
+      name=package_name,
+      packages=find_packages(exclude=['test']),
+      data_files=[
+          ('share/' + package_name, ['package.xml']),
+          ('share/' + package_name + '/config', glob.glob('config/*.yaml')),
+          ('share/' + package_name + '/launch', glob.glob('launch/*.launch')),
+      ],
+      install_requires=[
+          'launch',
+          'setuptools',
+      ],
+      zip_safe=True,
+      keywords=['ROS'],
+      license='MIT',
+      entry_points={
+          'console_scripts': [
+              f'receiver = {package_name}.receiver:main',
+              f'receiver = {package_name}.sender:main',
+          ],
+      }
 )
-
-setup(**d)
