@@ -70,16 +70,12 @@ class AutoSubscriber:
 def validate_params(node:Node):
     """:rtype: bool"""
     result = True
-    if not node.has_parameter("udp_bridge"):
-        node.get_logger().fatal("parameter 'udp_bridge' not found")
+    if not node.has_parameter("target_ips"):
+        node.get_logger().fatal("parameter 'target_ips' not found")
         result = False
-
-    if not node.has_parameter("udp_bridge/target_ips"):
-        node.get_logger().fatal("parameter 'udp_bridge/target_ips' not found")
-        result = False
-    target_ips = node.has_parameter("udp_bridge/target_ips")
+    target_ips = node.get_parameter("target_ips").value
     if not isinstance(target_ips, list):
-        node.get_logger().fatal("parameter udp_bridge/target_ips is not a list")
+        node.get_logger().fatal("parameter target_ips is not a list")
         result = False
     for addr in target_ips:
         try:
@@ -88,35 +84,35 @@ def validate_params(node:Node):
             node.get_logger().fatal("Cannot parse " + str(addr) + " as IP Address")
             result = False
 
-    if not node.has_parameter("udp_bridge/port"):
-        node.get_logger().fatal("parameter 'udp_bridge/port' not found")
+    if not node.has_parameter("port"):
+        node.get_logger().fatal("parameter 'port' not found")
         result = False
-    if not isinstance(node.has_parameter("udp_bridge/port"), int):
-        node.get_logger().fatal("parameter 'udp_bridge/port' is not an Integer")
-        result = False
-
-    if not node.has_parameter("udp_bridge/topics"):
-        node.get_logger().fatal("parameter 'udp_bridge/port' not found")
-        result = False
-    if not isinstance(node.has_parameter("udp_bridge/topics"), list):
-        node.get_logger().fatal("parameter 'udp_bridge/topics' is not a list")
-        result = False
-    if len(node.has_parameter("udp_bridge/topics")) == 0:
-        node.get_logger().warn("parameter 'udp_bridge/topics' is an empty list")
-
-    if not node.has_parameter('udp_bridge/sender_queue_max_size'):
-        node.get_logger().fatal('parameter \'sender_queue_max_size\' not found')
-        result = False
-    if not isinstance(node.has_parameter('udp_bridge/sender_queue_max_size'), int):
-        node.get_logger().fatal('parameter \'sender_queue_max_size\' is not an Integer')
+    if not isinstance(node.get_parameter("port").value, int):
+        node.get_logger().fatal("parameter 'port' is not an Integer")
         result = False
 
-    if not node.has_parameter('udp_bridge/send_frequency'):
-        node.get_logger().fatal('parameter \'send_frequency\' not found')
+    if not node.has_parameter("topics"):
+        node.get_logger().fatal("parameter 'port' not found")
         result = False
-    if not isinstance(node.get_parameter('udp_bridge/send_frequency').value, float) \
-        and not isinstance(node.get_parameter('udp_bridge/send_frequency').value, int):
-        node.get_logger().fatal('parameter \'send_frequency\' is not an Integer or Float')
+    if not isinstance(node.get_parameter("topics").value, list):
+        node.get_logger().fatal("parameter 'topics' is not a list")
+        result = False
+    if len(node.get_parameter("topics").value) == 0:
+        node.get_logger().warn("parameter 'topics' is an empty list")
+
+    if not node.has_parameter('sender_queue_max_size'):
+        node.get_logger().fatal("parameter 'sender_queue_max_size' not found")
+        result = False
+    if not isinstance(node.get_parameter('sender_queue_max_size').value, int):
+        node.get_logger().fatal("parameter 'sender_queue_max_size' is not an Integer")
+        result = False
+
+    if not node.has_parameter('send_frequency'):
+        node.get_logger().fatal("parameter 'send_frequency' not found")
+        result = False
+    if not isinstance(node.get_parameter('send_frequency').value, float) \
+        and not isinstance(node.get_parameter('send_frequency').value, int):
+        node.get_logger().fatal("parameter 'send_frequency' is not an Integer or Float")
         result = False
 
     return result
@@ -124,20 +120,20 @@ def validate_params(node:Node):
 
 def main():
     rclpy.init()
-    node = Node('udp_bridge_sender')
+    node = Node('udp_bridge_sender', automatically_declare_parameters_from_overrides=True)
     thread = Thread(target = rclpy.spin, args = (node))
     thread.start()
     if validate_params(node):
         hostname = socket.gethostname()
         encryption_key = None
-        if node.has_parameter("udp_bridge/encryption_key"):
-            node.get_parameter("udp_bridge/encryption_key").value
+        if node.has_parameter("encryption_key"):
+            node.get_parameter("encryption_key").value
         cipher = AESCipher(encryption_key)
-        port = node.get_parameter("udp_bridge/port").value
-        freq = node.get_parameter("udp_bridge/send_frequency").value
-        targets = node.get_parameter('udp_bridge/target_ips').value
-        max_queue_size = node.get_parameter('udp_bridge/sender_queue_max_size').value
-        topics = node.get_parameter("udp_bridge/topics").value
+        port = node.get_parameter("port").value
+        freq = node.get_parameter("send_frequency").value
+        targets = node.get_parameter('target_ips').value
+        max_queue_size = node.get_parameter('sender_queue_max_size').value
+        topics = node.get_parameter("topics").value
 
         sock = socket.socket(type=socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
