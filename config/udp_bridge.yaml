@@ -26,7 +26,7 @@
       - /animation/result
       - /animation/feedback
       - /animation
-      - /diagnostics
+      - /diagnostics_agg
       - /joint_states
       - /imu/data
       - /buttons
