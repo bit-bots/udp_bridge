@@ -12,16 +12,13 @@
 
   <!-- <url type="website">http://wiki.ros.org/udp_bridge</url> -->
 
-  <buildtool_depend>ament_python</buildtool_depend>
-  
   <depend>rclpy</depend>
-  <exec_depend>roslib</exec_depend>
 
   <depend>bitbots_docs</depend>
   <depend>python3-cryptography</depend>
 
   <test_depend>bitbots_test</test_depend>
-  <test_depend>python-hypothesis</test_depend>
+  <test_depend>python3-hypothesis</test_depend>
 
   <export>
     <bitbots_documentation>
