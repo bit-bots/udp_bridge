@@ -11,8 +11,6 @@
 
   <license>MIT</license>
 
-  <!-- <url type="website">http://wiki.ros.org/udp_bridge</url> -->
-
   <depend>rclpy</depend>
 
   <depend>bitbots_docs</depend>

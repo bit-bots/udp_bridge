@@ -1,16 +1,18 @@
 /**:
   ros__parameters:
-    encryption_key: "germanopen2019"
+    encryption_key: "robocup2023"
     port: 1234
     send_frequency: 10
     sender_queue_max_size: 5
     target_ips:
-      - 172.20.2.17
+      - 172.20.2.82
 
     topics:
       - /rosout
       - /robot_state
+      - /goal_pose
       - /cmd_vel
+      - /pose_with_covariance
       - /debug/dsd/body_behavior
       - /debug/dsd/head_behavior
       - /debug/dsd/hcm
