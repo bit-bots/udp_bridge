@@ -9,7 +9,7 @@ from udp_bridge.message_handler import MessageHandler
 from threading import Thread
 
 
-class UdpReceiver:
+class UdpBridgeReceiver:
     def __init__(self, node: Node):
         self.node = node
         port: str = node.get_parameter("port").value
@@ -19,7 +19,7 @@ class UdpReceiver:
         self.sock.bind(("0.0.0.0", port))
         self.sock.settimeout(1)
 
-        self.known_senders: list[str] = []  # type: list
+        self.known_senders: list[str] = []
         self.publishers = {}
 
         encryption_key: Optional[str] = None
@@ -96,7 +96,7 @@ def validate_params(node: Node) -> bool:
 
 
 def run_spin_in_thread(node):
-    # Necessary in ROS2, else we get stuck
+    # Necessary in ROS 2, or else we get stuck
     thread = Thread(target=rclpy.spin, args=[node], daemon=True)
     thread.start()
 
@@ -107,6 +107,6 @@ def main():
 
     if validate_params(node):
         # setup udp receiver
-        receiver = UdpReceiver(node)
+        receiver = UdpBridgeReceiver(node)
         run_spin_in_thread(node)
         receiver.recv_message()

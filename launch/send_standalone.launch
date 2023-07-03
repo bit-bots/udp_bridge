@@ -1,0 +1,5 @@
+<launch>
+    <!-- load the robot description -->
+    <include file="$(find-pkg-share bitbots_utils)/launch/base.launch" />
+    <include file="$(find-pkg-share udp_bridge)/launch/sender.launch" />
+</launch>

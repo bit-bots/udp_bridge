@@ -4,8 +4,6 @@
     port: 1234
     send_frequency: 10
     sender_queue_max_size: 5
-    target_ips:
-      - 172.20.2.82
 
     topics:
       - /rosout
@@ -23,7 +21,7 @@
       - /gamestate
       - /animation
       - /diagnostics_agg
-      - /joint_states 
+      - /joint_states
       - /imu/data
       - /buttons
       - /system_workload

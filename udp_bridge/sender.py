@@ -2,11 +2,11 @@
 
 from queue import Empty, Full, Queue
 import socket
-from threading import Thread
 from typing import Optional
 
+from bitbots_utils.utils import get_parameters_from_other_node
 import rclpy
-from rclpy.duration import Duration
+from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.subscription import Subscription
 from rclpy.timer import Timer
@@ -79,26 +79,12 @@ class AutoSubscriber:
         try:
             self.queue.put(encrypted_msg, block=True, timeout=0.5)
         except Full:
-            self.node.get_logger().warn(f"Could enqueue new message of topic {self.topic}. Queue full.")
+            self.node.get_logger().warn(f"Could not enqueue new message of topic {self.topic}. Queue full.")
 
 
 # @TODO: replace by usage of https://github.com/PickNikRobotics/generate_parameter_library
 def validate_params(node: Node) -> bool:
     result = True
-    if not node.has_parameter("target_ips"):
-        node.get_logger().fatal("parameter 'target_ips' not found")
-        result = False
-    target_ips = node.get_parameter("target_ips").value
-    if not isinstance(target_ips, list):
-        node.get_logger().fatal("parameter target_ips is not a list")
-        result = False
-    else:
-        for addr in target_ips:
-            try:
-                socket.inet_aton(addr)
-            except Exception as e:
-                node.get_logger().fatal("Cannot parse " + str(addr) + " as IP Address")
-                result = False
 
     if not node.has_parameter("port"):
         node.get_logger().fatal("parameter 'port' not found")
@@ -135,59 +121,63 @@ def validate_params(node: Node) -> bool:
     return result
 
 
-def setup_message_handler(node: Node) -> MessageHandler:
-    encryption_key: Optional[str] = None
-    if node.has_parameter("encryption_key"):
-        encryption_key = node.get_parameter("encryption_key").value
+class UdpBridgeSender:
+    def __init__(self, node: Node):
+        self.node = node
+        self.freq: float = node.get_parameter("send_frequency").value
 
-    return MessageHandler(encryption_key)
+        target_ip_parameter_name: str = "monitoring_host_ip"
+        params_blackboard = get_parameters_from_other_node(node, "parameter_blackboard", [target_ip_parameter_name])
+        self.target: str = params_blackboard[target_ip_parameter_name]
+        self.port: int = node.get_parameter("port").value
+        self.sock = self.setup_udp_socket()
 
+        topics: list[str] = node.get_parameter("topics").value
+        max_queue_size: int = node.get_parameter("sender_queue_max_size").value
+        message_handler = self.setup_message_handler()
+        self.subscribers: list[AutoSubscriber] = list(
+            map(lambda topic: AutoSubscriber(topic, max_queue_size, message_handler, node), topics)
+        )
 
-def run_spin_in_thread(node):
-    # Necessary in ROS2, else we get stuck
-    thread = Thread(target=rclpy.spin, args=[node], daemon=True)
-    thread.start()
+    def setup_udp_socket(self) -> socket.socket:
+        sock = socket.socket(type=socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        return sock
 
+    def setup_message_handler(self) -> MessageHandler:
+        encryption_key: Optional[str] = None
+        if self.node.has_parameter("encryption_key"):
+            encryption_key = self.node.get_parameter("encryption_key").value
 
-def setup_udp_broadcast_socket() -> socket.socket:
-    sock = socket.socket(type=socket.SOCK_DGRAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    return sock
+        return MessageHandler(encryption_key)
+
+    def send_messages_in_queue(self):
+        for subscriber in self.subscribers:
+            try:
+                data = subscriber.queue.get_nowait()
+
+                try:
+                    self.sock.sendto(data + MessageHandler.PACKAGE_DELIMITER, (self.target, self.port))
+                except Exception as e:
+                    self.node.get_logger().error(
+                        f"Could not send data of topic {subscriber.topic} to {self.target} with error {str(e)}"
+                    )
+
+            except Empty:
+                pass
 
 
 def main():
     rclpy.init()
     node = Node("udp_bridge_sender", automatically_declare_parameters_from_overrides=True)
-    run_spin_in_thread(node)
 
     if validate_params(node):
-        port: int = node.get_parameter("port").value
-        freq: float = node.get_parameter("send_frequency").value
-        targets: list[str] = node.get_parameter("target_ips").value
-        max_queue_size: int = node.get_parameter("sender_queue_max_size").value
-        topics: list[str] = node.get_parameter("topics").value
+        sender = UdpBridgeSender(node)
 
-        message_handler = setup_message_handler(node)
-        sock = setup_udp_broadcast_socket()
+        exec = SingleThreadedExecutor()
+        exec.add_node(node)
+        node.create_timer((1 / sender.freq), sender.send_messages_in_queue)
+        exec.spin()
 
-        subscribers: list[AutoSubscriber] = list(
-            map(lambda topic: AutoSubscriber(topic, max_queue_size, message_handler, node), topics)
-        )
-
-        while rclpy.ok():
-            for subscriber in subscribers:
-                try:
-                    data = subscriber.queue.get_nowait()
-
-                    for target in targets:
-                        try:
-                            sock.sendto(data + MessageHandler.PACKAGE_DELIMITER, (target, port))
-                        except Exception as e:
-                            node.get_logger().error(
-                                f"Could not send data of topic {subscriber.topic} to {target} with error {str(e)}"
-                            )
-
-                except Empty:
-                    pass
-
-            node.get_clock().sleep_for(Duration(nanoseconds=int(1000000000 / freq)))
+        node.destroy_node()
+        rclpy.shutdown()
