@@ -1,45 +1,43 @@
 #!/usr/bin/env python3
-import termios
-import sys
-import tty
+
+import socket
+from typing import Optional
+
 import rclpy
 from rclpy.node import Node
-import socket
-import pickle
-import base64
-import select
-import time
+from udp_bridge.message_handler import MessageHandler
 from threading import Thread
-from udp_bridge.aes_helper import AESCipher
 
 
-class UdpReceiver:
-    def __init__(self, node:Node):
+class UdpBridgeReceiver:
+    def __init__(self, node: Node):
         self.node = node
-        port = node.get_parameter("port").value
-        self.node.get_logger().info("Initializing udp_bridge on port " + str(port))
+        port: str = node.get_parameter("port").value
+        self.node.get_logger().info(f"Initializing udp_bridge on port {port}")
 
         self.sock = socket.socket(type=socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", port))
         self.sock.settimeout(1)
 
-        self.known_senders = []  # type: list
-
-        self.cipher = AESCipher(self.node.get_parameter("encryption_key").value)
-
+        self.known_senders: list[str] = []
         self.publishers = {}
+
+        encryption_key: Optional[str] = None
+        if node.has_parameter("encryption_key"):
+            encryption_key = node.get_parameter("encryption_key").value
+
+        self.message_handler = MessageHandler(encryption_key)
 
     def recv_message(self):
         """
         Receive a message from the network, process it and publish it into ROS
         """
-        self.sock.settimeout(1)
         acc = bytes()
         while rclpy.ok():
             try:
                 acc += self.sock.recv(10240)
 
-                if acc[-3:] == b'\xff\xff\xff':  # our package delimiter
+                if acc[-3:] == MessageHandler.PACKAGE_DELIMITER:
                     self.handle_message(acc[:-3])
                     acc = bytes()
 
@@ -51,20 +49,17 @@ class UdpReceiver:
         Handle a new message which came in from the socket
         """
         try:
-            dec_msg = self.cipher.decrypt(msg)
-            bin_msg = base64.b64decode(dec_msg)
-            deserialized_msg = pickle.loads(bin_msg)
-
-            data = deserialized_msg['data']
-            topic = deserialized_msg['topic']
-            hostname = deserialized_msg['hostname']
+            deserialized_msg = self.message_handler.dencrypt_and_decode(msg)
+            data = deserialized_msg.get("data")
+            topic: str = deserialized_msg.get("topic")
+            hostname: str = deserialized_msg.get("hostname")
 
             if hostname not in self.known_senders:
                 self.known_senders.append(hostname)
 
             self.publish(topic, data, hostname)
         except Exception as e:
-            self.node.get_logger().error('Could not deserialize received message with error {}'.format(str(e)))
+            self.node.get_logger().error(f"Could not deserialize received message with error {e}")
 
     def publish(self, topic: str, msg, hostname: str):
         """
@@ -76,16 +71,17 @@ class UdpReceiver:
         """
 
         # publish msg under host namespace
-        namespaced_topic = "{}/{}".format(hostname, topic).replace("//", "/")
+        namespaced_topic = hostname.replace("-", "_") + topic
 
         # create a publisher object if we don't have one already
         if namespaced_topic not in self.publishers.keys():
-            self.node.get_logger().info('Publishing new topic {}'.format(namespaced_topic))
-            self.publishers[namespaced_topic] = self.node.create_publisher(type(msg),namespaced_topic, 1)
+            self.node.get_logger().info(f"Publishing new topic {namespaced_topic}")
+            self.publishers[namespaced_topic] = self.node.create_publisher(type(msg), namespaced_topic, 1)
 
         self.publishers[namespaced_topic].publish(msg)
 
 
+# @TODO: replace by usage of https://github.com/PickNikRobotics/generate_parameter_library
 def validate_params(node: Node) -> bool:
     result = True
 
@@ -99,12 +95,18 @@ def validate_params(node: Node) -> bool:
     return result
 
 
+def run_spin_in_thread(node):
+    # Necessary in ROS 2, or else we get stuck
+    thread = Thread(target=rclpy.spin, args=[node], daemon=True)
+    thread.start()
+
+
 def main():
     rclpy.init()
     node = Node("udp_bridge_receiver", automatically_declare_parameters_from_overrides=True)
+
     if validate_params(node):
         # setup udp receiver
-        receiver = UdpReceiver(node)
-        thread = Thread(target=rclpy.spin, args=(node,))
-        thread.start()
+        receiver = UdpBridgeReceiver(node)
+        run_spin_in_thread(node)
         receiver.recv_message()

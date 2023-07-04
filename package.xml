@@ -11,11 +11,10 @@
 
   <license>MIT</license>
 
-  <!-- <url type="website">http://wiki.ros.org/udp_bridge</url> -->
-
   <depend>rclpy</depend>
 
   <depend>bitbots_docs</depend>
+  <depend>bitbots_utils</depend>
   <depend>python3-cryptography</depend>
 
   <test_depend>bitbots_test</test_depend>
