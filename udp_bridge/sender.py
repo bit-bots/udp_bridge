@@ -77,7 +77,7 @@ class AutoSubscriber:
         )
 
         try:
-            self.queue.put(encrypted_msg, block=True, timeout=0.5)
+            self.queue.put(encrypted_msg, block=True, timeout=1)
         except Full:
             self.node.get_logger().warn(f"Could not enqueue new message of topic {self.topic}. Queue full.")
 
