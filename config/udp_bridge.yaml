@@ -2,7 +2,7 @@
   ros__parameters:
     encryption_key: "robocup2023"
     port: 1234
-    send_frequency: 10
+    send_frequency: 300
     sender_queue_max_size: 5
 
     topics:
@@ -15,6 +15,7 @@
       - /debug/dsd/hcm
       - /team_data
       - /balls_relative
+      - /debug/viz_ball
       - /robots_relative
       - /gamestate
       - /animation
