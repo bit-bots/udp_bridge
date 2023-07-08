@@ -24,4 +24,5 @@ class SenderTestCase(RosNodeTestCase):
 
 if __name__ == "__main__":
     from bitbots_test import run_rostests
+
     run_rostests(SenderTestCase)

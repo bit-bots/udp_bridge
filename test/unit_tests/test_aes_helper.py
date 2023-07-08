@@ -15,6 +15,7 @@ class AesHelperTestCase(TestCase):
         self.assertEqual(message, dec_text)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from bitbots_test import run_unit_tests
+
     run_unit_tests(AesHelperTestCase)
