@@ -1,14 +1,13 @@
 import base64
 import pickle
 
-from typing import Optional
 from udp_bridge.aes_helper import AESCipher
 
 
 class MessageHandler:
     PACKAGE_DELIMITER = b"\xff\xff\xff"
 
-    def __init__(self, encryption_key: Optional[str]):
+    def __init__(self, encryption_key: str | None):
         self.cipher = AESCipher(encryption_key)
 
     def encrypt_and_encode(self, data: dict) -> bytes:

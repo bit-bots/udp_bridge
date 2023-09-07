@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-import rospy
 from socket import gethostname
-from std_msgs import msg
-from bitbots_test.test_case import RosNodeTestCase
+
+import rospy
 from bitbots_test.mocks import MockSubscriber
+from bitbots_test.test_case import RosNodeTestCase
+from std_msgs import msg
 
 
 class SenderReceiverTestCase(RosNodeTestCase):

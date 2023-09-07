@@ -1,7 +1,8 @@
-from udp_bridge import aes_helper
-from hypothesis import given, assume
-from hypothesis.strategies import text
 from bitbots_test.test_case import TestCase
+from hypothesis import assume, given
+from hypothesis.strategies import text
+
+from udp_bridge import aes_helper
 
 
 class AesHelperTestCase(TestCase):
