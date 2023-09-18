@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 import socket
-from typing import Optional
+from threading import Thread
 
 import rclpy
 from rclpy.node import Node
+
 from udp_bridge.message_handler import MessageHandler
-from threading import Thread
 
 
 class UdpBridgeReceiver:
@@ -22,7 +22,7 @@ class UdpBridgeReceiver:
         self.known_senders: list[str] = []
         self.publishers = {}
 
-        encryption_key: Optional[str] = None
+        encryption_key: str | None = None
         if node.has_parameter("encryption_key"):
             encryption_key = node.get_parameter("encryption_key").value
 
@@ -32,14 +32,14 @@ class UdpBridgeReceiver:
         """
         Receive a message from the network, process it and publish it into ROS
         """
-        acc = bytes()
+        acc = b""
         while rclpy.ok():
             try:
                 acc += self.sock.recv(10240)
 
                 if acc[-3:] == MessageHandler.PACKAGE_DELIMITER:
                     self.handle_message(acc[:-3])
-                    acc = bytes()
+                    acc = b""
 
             except socket.timeout:
                 pass

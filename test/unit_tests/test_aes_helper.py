@@ -1,7 +1,8 @@
-from udp_bridge import aes_helper
-from hypothesis import given, assume
-from hypothesis.strategies import text
 from bitbots_test.test_case import TestCase
+from hypothesis import assume, given
+from hypothesis.strategies import text
+
+from udp_bridge import aes_helper
 
 
 class AesHelperTestCase(TestCase):
@@ -15,6 +16,7 @@ class AesHelperTestCase(TestCase):
         self.assertEqual(message, dec_text)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from bitbots_test import run_unit_tests
+
     run_unit_tests(AesHelperTestCase)
