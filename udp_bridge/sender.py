@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
-from queue import Empty, Full, Queue
 import socket
-from typing import Optional
+from queue import Empty, Full, Queue
 
-from bitbots_utils.utils import get_parameters_from_other_node
 import rclpy
+from bitbots_utils.utils import get_parameters_from_other_node
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.subscription import Subscription
 from rclpy.timer import Timer
 from ros2topic.api import get_msg_class, get_topic_names
+
 from udp_bridge.message_handler import MessageHandler
 
 HOSTNAME = socket.gethostname()
@@ -33,9 +33,9 @@ class AutoSubscriber:
         self.queue: Queue = Queue(queue_size)
         self.message_handler: MessageHandler = message_handler
         self.node: Node = node
-        self.timer: Optional[Timer] = None
+        self.timer: Timer | None = None
 
-        self.__subscriber: Optional[Subscription] = None
+        self.__subscriber: Subscription | None = None
         self.__subscribe()
 
     def __subscribe(self, backoff=1.0):
@@ -145,7 +145,7 @@ class UdpBridgeSender:
         return sock
 
     def setup_message_handler(self) -> MessageHandler:
-        encryption_key: Optional[str] = None
+        encryption_key: str | None = None
         if self.node.has_parameter("encryption_key"):
             encryption_key = self.node.get_parameter("encryption_key").value
 

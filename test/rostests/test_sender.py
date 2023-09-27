@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-import rospy
 import socket
-from std_msgs import msg
+
+import rospy
 from bitbots_test.test_case import RosNodeTestCase
+from std_msgs import msg
 
 
 class SenderTestCase(RosNodeTestCase):
@@ -24,4 +25,5 @@ class SenderTestCase(RosNodeTestCase):
 
 if __name__ == "__main__":
     from bitbots_test import run_rostests
+
     run_rostests(SenderTestCase)

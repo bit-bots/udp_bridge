@@ -1,5 +1,4 @@
 import base64
-from typing import Optional
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
@@ -15,7 +14,7 @@ class AESCipher:
     It is safe to keep one object because the internal python cipher is not reused.
     """
 
-    def __init__(self, key: Optional[str]):
+    def __init__(self, key: str | None):
         """
         :param key: The passphrase used to encrypt and decrypt messages.
             If it is None, no encryption/decryption takes place
