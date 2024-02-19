@@ -7,9 +7,10 @@
 
   <maintainer email="7sell@informatik.uni-hamburg.de">Finn-Thorben Sell</maintainer>
   <maintainer email="info@bit-bots.de">Hamburg Bit-Bots</maintainer>
-  <author email="7sell@informatik.uni-hamburg.de">Finn-Thorben Sell</author>
 
   <license>MIT</license>
+
+  <author email="7sell@informatik.uni-hamburg.de">Finn-Thorben Sell</author>
 
   <depend>rclpy</depend>
 
