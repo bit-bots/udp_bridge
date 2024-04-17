@@ -2,6 +2,7 @@
 
 import socket
 from queue import Empty, Full, Queue
+import zlib
 
 import rclpy
 from bitbots_utils.utils import get_parameters_from_other_node
@@ -9,6 +10,7 @@ from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.subscription import Subscription
 from rclpy.timer import Timer
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from ros2topic.api import get_msg_class, get_topic_names
 
 from udp_bridge.message_handler import MessageHandler
@@ -36,6 +38,7 @@ class AutoSubscriber:
         self.timer: Timer | None = None
 
         self.__subscriber: Subscription | None = None
+        self.__latched_subscriber: Subscription | None = None
         self.__subscribe()
 
     def __subscribe(self, backoff=1.0):
@@ -55,19 +58,28 @@ class AutoSubscriber:
 
         if topic is not None:
             data_class = get_msg_class(self.node, topic)
-            self.node.get_logger().info(str(data_class))
 
         if data_class is not None:
             # topic is known
-            self.node.get_logger().info(f"Want to subscribe to topic {self.topic}")
+            self.node.get_logger().debug(f"Want to subscribe to topic {self.topic}")
+            # find out if topic is latched / transient local
+            publisher_infos = self.node.get_publishers_info_by_topic(topic)
+            latched = any(info.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL for info in publisher_infos)
             self.__subscriber = self.node.create_subscription(data_class, self.topic, self.__message_callback, 1)
-            self.node.get_logger().info(f"Subscribed to topic {self.topic}")
+            if latched:
+                self.__latched_subscriber = self.node.create_subscription(
+                        data_class,
+                        self.topic,
+                        lambda msg: self.__message_callback(msg, latched=True),
+                        QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+                )
+            self.node.get_logger().debug(f"Subscribed to topic {self.topic}")
         else:
             # topic is not yet known
-            self.node.get_logger().info(f"Topic {self.topic} is not yet known. Retrying in {backoff} seconds")
+            self.node.get_logger().debug(f"Topic {self.topic} is not yet known. Retrying in {backoff} seconds")
             self.timer = self.node.create_timer(backoff, lambda: self.__subscribe(backoff * 1.2))
 
-    def __message_callback(self, data):
+    def __message_callback(self, data, latched=False):
         encrypted_msg = self.message_handler.encrypt_and_encode(
             {
                 "data": data,
@@ -81,6 +93,11 @@ class AutoSubscriber:
         except Full:
             self.node.get_logger().warn(f"Could not enqueue new message of topic {self.topic}. Queue full.")
 
+        # for latched messages, republish them every ten seconds because we cannot latch on the other side
+        if latched:
+            if self.timer:
+                self.timer.cancel()
+            self.timer = self.node.create_timer(10.0, lambda: self.__message_callback(data, latched=True))
 
 # @TODO: replace by usage of https://github.com/PickNikRobotics/generate_parameter_library
 def validate_params(node: Node) -> bool:
@@ -157,7 +174,7 @@ class UdpBridgeSender:
                 data = subscriber.queue.get_nowait()
 
                 try:
-                    self.sock.sendto(data + MessageHandler.PACKAGE_DELIMITER, (self.target, self.port))
+                    self.sock.sendto(data, (self.target, self.port))
                 except Exception as e:
                     self.node.get_logger().error(
                         f"Could not send data of topic {subscriber.topic} to {self.target} with error {str(e)}"
