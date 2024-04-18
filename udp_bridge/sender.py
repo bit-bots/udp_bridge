@@ -11,6 +11,7 @@ from rclpy.node import Node
 from rclpy.subscription import Subscription
 from rclpy.timer import Timer
 from rclpy.qos import DurabilityPolicy, QoSProfile
+from rclpy.logging import LoggingSeverity
 from ros2topic.api import get_msg_class, get_topic_names
 
 from udp_bridge.message_handler import MessageHandler
@@ -76,7 +77,11 @@ class AutoSubscriber:
             self.node.get_logger().debug(f"Subscribed to topic {self.topic}")
         else:
             # topic is not yet known
-            self.node.get_logger().debug(f"Topic {self.topic} is not yet known. Retrying in {backoff} seconds")
+            if backoff > 10:
+                logging_severity = LoggingSeverity.WARN
+            else:
+                logging_severity = LoggingSeverity.DEBUG
+            self.node.get_logger().log(f"Topic {self.topic} is not yet known. Retrying in {backoff} seconds", logging_severity)
             self.timer = self.node.create_timer(backoff, lambda: self.__subscribe(backoff * 1.2))
 
     def __message_callback(self, data, latched=False):
