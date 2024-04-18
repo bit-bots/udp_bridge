@@ -11,8 +11,15 @@
       - /goal_pose
       - /cmd_vel
       - /pose_with_covariance
-      - /debug/dsd/body_behavior
-      - /debug/dsd/hcm
+      - /debug/dsd/body_behavior/dsd_current_action
+      - /debug/dsd/body_behavior/dsd_tree
+      - /debug/dsd/body_behavior/dsd_stack
+      - /debug/dsd/hcm/dsd_current_action
+      - /debug/dsd/hcm/dsd_tree
+      - /debug/dsd/hcm/dsd_stack
+      - /debug/dsd/localization/dsd_current_action
+      - /debug/dsd/localization/dsd_tree
+      - /debug/dsd/localization/dsd_stack
       - /team_data
       - /balls_relative
       - /debug/viz_ball
@@ -20,7 +27,7 @@
       - /gamestate
       - /animation
       - /diagnostics_agg
-      - /joint_states
       - /imu/data
       - /buttons
       - /system_workload
+      - /field/map
