@@ -21,13 +21,8 @@
       - /debug/dsd/localization/dsd_tree
       - /debug/dsd/localization/dsd_stack
       - /team_data
-      - /balls_relative
-      - /debug/viz_ball
-      - /robots_relative
+      - /ball_position_relative_filtered
       - /gamestate
-      - /animation
       - /diagnostics_agg
-      - /imu/data
-      - /buttons
       - /system_workload
       - /field/map
