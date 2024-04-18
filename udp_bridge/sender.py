@@ -2,16 +2,15 @@
 
 import socket
 from queue import Empty, Full, Queue
-import zlib
 
 import rclpy
 from bitbots_utils.utils import get_parameters_from_other_node
 from rclpy.executors import SingleThreadedExecutor
+from rclpy.logging import LoggingSeverity
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.subscription import Subscription
 from rclpy.timer import Timer
-from rclpy.qos import DurabilityPolicy, QoSProfile
-from rclpy.logging import LoggingSeverity
 from ros2topic.api import get_msg_class, get_topic_names
 
 from udp_bridge.message_handler import MessageHandler
@@ -69,10 +68,10 @@ class AutoSubscriber:
             self.__subscriber = self.node.create_subscription(data_class, self.topic, self.__message_callback, 1)
             if latched:
                 self.__latched_subscriber = self.node.create_subscription(
-                        data_class,
-                        self.topic,
-                        lambda msg: self.__message_callback(msg, latched=True),
-                        QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+                    data_class,
+                    self.topic,
+                    lambda msg: self.__message_callback(msg, latched=True),
+                    QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL),
                 )
             self.node.get_logger().debug(f"Subscribed to topic {self.topic}")
         else:
@@ -81,7 +80,9 @@ class AutoSubscriber:
                 logging_severity = LoggingSeverity.WARN
             else:
                 logging_severity = LoggingSeverity.DEBUG
-            self.node.get_logger().log(f"Topic {self.topic} is not yet known. Retrying in {backoff} seconds", logging_severity)
+            self.node.get_logger().log(
+                f"Topic {self.topic} is not yet known. Retrying in {backoff} seconds", logging_severity
+            )
             self.timer = self.node.create_timer(backoff, lambda: self.__subscribe(backoff * 1.2))
 
     def __message_callback(self, data, latched=False):
@@ -103,6 +104,7 @@ class AutoSubscriber:
             if self.timer:
                 self.timer.cancel()
             self.timer = self.node.create_timer(10.0, lambda: self.__message_callback(data, latched=True))
+
 
 # @TODO: replace by usage of https://github.com/PickNikRobotics/generate_parameter_library
 def validate_params(node: Node) -> bool:
