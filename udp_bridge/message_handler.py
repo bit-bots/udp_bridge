@@ -1,7 +1,13 @@
+import io
 import pickle
 import zlib
 
 from udp_bridge.aes_helper import AESCipher
+
+
+class RestrictedUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        raise pickle.UnpicklingError("pickle loading restricted to base types")
 
 
 class MessageHandler:
@@ -15,4 +21,4 @@ class MessageHandler:
     def decrypt_and_decode(self, msg: bytes):
         decrypted_msg = self.cipher.decrypt(msg)
         binary_msg = zlib.decompress(decrypted_msg)
-        return pickle.loads(binary_msg)
+        return RestrictedUnpickler(io.BytesIO(binary_msg)).load()
