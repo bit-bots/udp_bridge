@@ -91,6 +91,7 @@ class AutoSubscriber:
                 "data": data,
                 "topic": self.topic,
                 "hostname": HOSTNAME,
+                "latched": latched,
             }
         )
 

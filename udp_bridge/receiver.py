@@ -5,6 +5,7 @@ from threading import Thread
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile
 
 from udp_bridge.message_handler import MessageHandler
 
@@ -49,15 +50,16 @@ class UdpBridgeReceiver:
             data = deserialized_msg.get("data")
             topic: str = deserialized_msg.get("topic")
             hostname: str = deserialized_msg.get("hostname")
+            latched: bool = deserialized_msg.get("latched")
 
             if hostname not in self.known_senders:
                 self.known_senders.append(hostname)
 
-            self.publish(topic, data, hostname)
+            self.publish(topic, data, hostname, latched)
         except Exception as e:
             self.node.get_logger().error(f"Could not deserialize received message with error {e}")
 
-    def publish(self, topic: str, msg, hostname: str):
+    def publish(self, topic: str, msg, hostname: str, latched: bool):
         """
         Publish a message into ROS
 
@@ -72,7 +74,11 @@ class UdpBridgeReceiver:
         # create a publisher object if we don't have one already
         if namespaced_topic not in self.publishers.keys():
             self.node.get_logger().info(f"Publishing new topic {namespaced_topic}")
-            self.publishers[namespaced_topic] = self.node.create_publisher(type(msg), namespaced_topic, 1)
+            self.publishers[namespaced_topic] = self.node.create_publisher(
+                type(msg),
+                namespaced_topic,
+                qos_profile=QoSProfile(depth=10, durability=DurabilityPolicy.TRANSIENT_LOCAL) if latched else 10,
+            )
 
         self.publishers[namespaced_topic].publish(msg)
 
