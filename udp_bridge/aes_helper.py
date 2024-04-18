@@ -29,18 +29,18 @@ class AESCipher:
         else:
             self.encryption_key = None
 
-    def encrypt(self, message: str) -> bytes:
+    def encrypt(self, message: bytes) -> bytes:
         if message == "":
             raise ValueError("Cannot encrypt empty message")
         if self.encryption_key is None:
             return bytes(message, encoding="UTF-8")
 
-        return Fernet(key=self.encryption_key).encrypt(bytes(message, encoding="UTF-8"))
+        return Fernet(key=self.encryption_key).encrypt(message)
 
-    def decrypt(self, enc: bytes) -> str:
+    def decrypt(self, enc: bytes) -> bytes:
         if len(enc) == 0:
             raise ValueError("Cannot decrypt empty data")
         if self.encryption_key is None:
             return str(enc, encoding="UTF-8")
 
-        return str(Fernet(key=self.encryption_key).decrypt(enc), encoding="UTF-8")
+        return Fernet(key=self.encryption_key).decrypt(enc)

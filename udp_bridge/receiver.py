@@ -32,15 +32,11 @@ class UdpBridgeReceiver:
         """
         Receive a message from the network, process it and publish it into ROS
         """
-        acc = b""
         while rclpy.ok():
             try:
-                acc += self.sock.recv(10240)
-
-                if acc[-3:] == MessageHandler.PACKAGE_DELIMITER:
-                    self.handle_message(acc[:-3])
-                    acc = b""
-
+                # 65535 is the upper limit for the size because of network properties
+                msg = self.sock.recv(65535)
+                self.handle_message(msg)
             except socket.timeout:
                 pass
 
@@ -49,7 +45,7 @@ class UdpBridgeReceiver:
         Handle a new message which came in from the socket
         """
         try:
-            deserialized_msg = self.message_handler.dencrypt_and_decode(msg)
+            deserialized_msg = self.message_handler.decrypt_and_decode(msg)
             data = deserialized_msg.get("data")
             topic: str = deserialized_msg.get("topic")
             hostname: str = deserialized_msg.get("hostname")
