@@ -9,9 +9,10 @@ from rclpy.executors import SingleThreadedExecutor
 from rclpy.logging import LoggingSeverity
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
+from rclpy.serialization import serialize_message
 from rclpy.subscription import Subscription
 from rclpy.timer import Timer
-from ros2topic.api import get_msg_class, get_topic_names
+from rosidl_runtime_py.utilities import get_message
 
 from udp_bridge.message_handler import MessageHandler
 
@@ -36,6 +37,7 @@ class AutoSubscriber:
         self.message_handler: MessageHandler = message_handler
         self.node: Node = node
         self.timer: Timer | None = None
+        self.msg_type_name: str = None
 
         self.__subscriber: Subscription | None = None
         self.__latched_subscriber: Subscription | None = None
@@ -53,43 +55,44 @@ class AutoSubscriber:
             self.timer.cancel()
 
         data_class = None
-        topics = get_topic_names(node=self.node)
-        topic = next(filter(lambda t: t == self.topic, topics), None)
-
-        if topic is not None:
-            data_class = get_msg_class(self.node, topic)
-
-        if data_class is not None:
-            # topic is known
-            self.node.get_logger().debug(f"Want to subscribe to topic {self.topic}")
-            # find out if topic is latched / transient local
-            publisher_infos = self.node.get_publishers_info_by_topic(topic)
-            latched = any(info.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL for info in publisher_infos)
-            self.__subscriber = self.node.create_subscription(data_class, self.topic, self.__message_callback, 1)
-            if latched:
-                self.__latched_subscriber = self.node.create_subscription(
-                    data_class,
-                    self.topic,
-                    lambda msg: self.__message_callback(msg, latched=True),
-                    QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL),
+        for topic, msg_type_names in self.node.get_topic_names_and_types():
+            if topic == self.topic:
+                self.msg_type_name = msg_type_names[0]
+                data_class = get_message(self.msg_type_name)
+                # topic is known
+                self.node.get_logger().debug(f"Want to subscribe to topic {self.topic}")
+                # find out if topic is latched / transient local
+                publisher_infos = self.node.get_publishers_info_by_topic(topic)
+                latched = any(
+                    info.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL for info in publisher_infos
                 )
-            self.node.get_logger().debug(f"Subscribed to topic {self.topic}")
+                self.__subscriber = self.node.create_subscription(data_class, self.topic, self.__message_callback, 1)
+                if latched:
+                    self.__latched_subscriber = self.node.create_subscription(
+                        data_class,
+                        self.topic,
+                        lambda msg: self.__message_callback(msg, latched=True),
+                        QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL),
+                    )
+                self.node.get_logger().debug(f"Subscribed to topic {self.topic}")
+                return
+
+        # topic is not yet known
+        if backoff > 10:
+            logging_severity = LoggingSeverity.WARN
         else:
-            # topic is not yet known
-            if backoff > 10:
-                logging_severity = LoggingSeverity.WARN
-            else:
-                logging_severity = LoggingSeverity.DEBUG
-            self.node.get_logger().log(
-                f"Topic {self.topic} is not yet known. Retrying in {backoff} seconds", logging_severity
-            )
-            self.timer = self.node.create_timer(backoff, lambda: self.__subscribe(backoff * 1.2))
+            logging_severity = LoggingSeverity.DEBUG
+        self.node.get_logger().log(
+            f"Topic {self.topic} is not yet known. Retrying in {backoff} seconds", logging_severity
+        )
+        self.timer = self.node.create_timer(backoff, lambda: self.__subscribe(backoff * 1.2))
 
     def __message_callback(self, data, latched=False):
         encrypted_msg = self.message_handler.encrypt_and_encode(
             {
-                "data": data,
+                "data": serialize_message(data),
                 "topic": self.topic,
+                "msg_type_name": self.msg_type_name,
                 "hostname": HOSTNAME,
                 "latched": latched,
             }

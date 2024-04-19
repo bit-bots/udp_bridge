@@ -6,6 +6,8 @@ from threading import Thread
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
+from rclpy.serialization import deserialize_message
+from rosidl_runtime_py.utilities import get_message
 
 from udp_bridge.message_handler import MessageHandler
 
@@ -47,7 +49,8 @@ class UdpBridgeReceiver:
         """
         try:
             deserialized_msg = self.message_handler.decrypt_and_decode(msg)
-            data = deserialized_msg.get("data")
+            msg_type_name = deserialized_msg.get("msg_type_name")
+            data = deserialize_message(deserialized_msg.get("data"), get_message(msg_type_name))
             topic: str = deserialized_msg.get("topic")
             hostname: str = deserialized_msg.get("hostname")
             latched: bool = deserialized_msg.get("latched")
