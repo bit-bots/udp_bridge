@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    encryption_key: "robocup2023"
+    encryption_key: "robocup2024"
     port: 1234
     send_frequency: 300
     sender_queue_max_size: 5
