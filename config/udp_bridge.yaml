@@ -6,23 +6,24 @@
     sender_queue_max_size: 5
 
     topics:
-      - /rosout
-      - /robot_state
-      - /goal_pose
-      - /cmd_vel
-      - /pose_with_covariance
-      - /debug/dsd/body_behavior/dsd_current_action
-      - /debug/dsd/body_behavior/dsd_tree
-      - /debug/dsd/body_behavior/dsd_stack
-      - /debug/dsd/hcm/dsd_current_action
-      - /debug/dsd/hcm/dsd_tree
-      - /debug/dsd/hcm/dsd_stack
-      - /debug/dsd/localization/dsd_current_action
-      - /debug/dsd/localization/dsd_tree
-      - /debug/dsd/localization/dsd_stack
-      - /team_data
       - /ball_position_relative_filtered
-      - /gamestate
+      - /cmd_vel
+      - /debug/dsd/body_behavior/dsd_current_action
+      - /debug/dsd/body_behavior/dsd_stack
+      - /debug/dsd/body_behavior/dsd_tree
+      - /debug/dsd/hcm/dsd_current_action
+      - /debug/dsd/hcm/dsd_stack
+      - /debug/dsd/hcm/dsd_tree
+      - /debug/dsd/localization/dsd_current_action
+      - /debug/dsd/localization/dsd_stack
+      - /debug/dsd/localization/dsd_tree
       - /diagnostics_agg
-      - /system_workload
       - /field/map
+      - /gamestate
+      - /goal_pose
+      - /pose_with_covariance
+      - /robot_state
+      - /rosout
+      - /system_workload
+      - /team_data
+      - /workspace_status
