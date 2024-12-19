@@ -18,7 +18,7 @@
   <depend>bitbots_utils</depend>
   <depend>python3-cryptography</depend>
 
-  <test_depend>python3-hypothesis</test_depend>
+  <test_depend>python3-pytest</test_depend>
 
   <export>
     <bitbots_documentation>
