@@ -155,8 +155,10 @@ class UdpBridgeSender:
         self.freq: float = node.get_parameter("send_frequency").value
 
         target_ip_parameter_name: str = "monitoring_host_ip"
-        self.params_blackboard = get_parameters_from_other_node(node, "parameter_blackboard", [target_ip_parameter_name])
-        if any( param_val is None for param_val in self.params_blackboard.values()):
+        self.params_blackboard = get_parameters_from_other_node(
+            node, "parameter_blackboard", [target_ip_parameter_name]
+            )
+        if any(param_val is None for param_val in self.params_blackboard.values()):
             error_text = """
 The robot is not configured properly or the parameter_blackboard is not found.
 It is likely that the robot was not configured when you syncronised your clean code onto the robot.
