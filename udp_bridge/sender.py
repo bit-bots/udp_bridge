@@ -4,7 +4,7 @@ import socket
 from queue import Empty, Full, Queue
 
 import rclpy
-from bitbots_utils.utils import get_parameters_from_other_node, RobotNotConfiguredError
+from bitbots_utils.utils import RobotNotConfiguredError, get_parameters_from_other_node
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.logging import LoggingSeverity
 from rclpy.node import Node
