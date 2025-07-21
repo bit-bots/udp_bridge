@@ -4,7 +4,7 @@ import socket
 from queue import Empty, Full, Queue
 
 import rclpy
-from bitbots_utils.utils import get_parameters_from_other_node
+from bitbots_utils.utils import RobotNotConfiguredError, get_parameters_from_other_node
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.logging import LoggingSeverity
 from rclpy.node import Node
@@ -155,8 +155,17 @@ class UdpBridgeSender:
         self.freq: float = node.get_parameter("send_frequency").value
 
         target_ip_parameter_name: str = "monitoring_host_ip"
-        params_blackboard = get_parameters_from_other_node(node, "parameter_blackboard", [target_ip_parameter_name])
-        self.target: str = params_blackboard[target_ip_parameter_name]
+        self.params_blackboard = get_parameters_from_other_node(
+            node, "parameter_blackboard", [target_ip_parameter_name]
+        )
+        if any(param_val is None for param_val in self.params_blackboard.values()):
+            error_text = """
+The robot is not configured properly or the parameter_blackboard is not found.
+It is likely that the robot was not configured when you syncronised your clean code onto the robot.
+Run the deploy_robots script with the -c option to configure the robot and set parameters like the robot id and its role."""
+            self._node.get_logger().fatal(error_text)
+            raise RobotNotConfiguredError(error_text)
+        self.target: str = self.params_blackboard[target_ip_parameter_name]
         self.port: int = node.get_parameter("port").value
         self.sock = self.setup_udp_socket()
 
